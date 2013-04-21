@@ -41,8 +41,40 @@ test('slice', function (t) {
     }
 });
 
+test('follow', function (t) {
+    t.plan(1);
+    
+    var lines = [];
+    var s = ld.open([ 'a', 'b' ]).follow(-5);
+    s.pipe(through(write, end));
+    
+    function write (line) {
+        lines.push(line);
+        if (lines.length === 5) {
+            t.deepEqual(
+                lines.map(strip),
+                [ 'ccc\n', 'BBB\n', 'CCC\n', 'ddd\n', 'DDD\n' ]
+            );
+            a.write('xyz\n');
+            setTimeout(function () { b.write('XYZ\n') }, 50);
+            setTimeout(function () { s.close() }, 50);
+        }
+    }
+    
+    function end () {
+        t.deepEqual(
+            lines.slice(-2).map(strip),
+            [ 'xyz\n', 'XYZ\n' ]
+        );
+    }
+});
+
 test('teardown', function (t) {
     a.end();
     b.end();
     t.end();
 });
+
+function strip (line) {
+    return line.replace(/^\S+\s\d+ /, '');
+}
