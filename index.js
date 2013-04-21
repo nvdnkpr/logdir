@@ -116,6 +116,7 @@ Logdir.prototype.opendir = function () {
     };
     
     ev.close = function () {
+        if (watcher) watcher.close();
         Object.keys(handles).forEach(function (key) {
             handles[key].close();
         });
