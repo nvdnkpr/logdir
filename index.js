@@ -100,22 +100,25 @@ function tie (method, files) {
                 if (stamp) buffer.push([ stamp[1], key, line ]);
             }
             function end () {
-                if (--pending !== 0) return;
-                buffer.sort(function (a, b) { return a[0] - b[0] });
-                buffer.slice.apply(buffer, args).forEach(function (msg) {
-                    tr.queue(msg[1] + ' ' + msg[2]);
-                });
-                if (method === 'follow') {
-                    Object.keys(files).forEach(function (key) {
-                        files[key].follow(-1,0).pipe(through(function (line) {
-                            this.queue(key + ' ' + line);
-                        })).pipe(tr, { end: false });
-                    });
-                }
-                else tr.close();
+                if (--pending === 0) done();
             }
         });
         return tr;
+        
+        function done () {
+            buffer.sort(function (a, b) { return a[0] - b[0] });
+            buffer.slice.apply(buffer, args).forEach(function (msg) {
+                tr.queue(msg[1] + ' ' + msg[2]);
+            });
+            if (method === 'follow') {
+                Object.keys(files).forEach(function (key) {
+                    files[key].follow(-1,0).pipe(through(function (line) {
+                        this.queue(key + ' ' + line);
+                    })).pipe(tr, { end: false });
+                });
+            }
+            else tr.close();
+        }
     };
 }
 
