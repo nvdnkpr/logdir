@@ -27,6 +27,41 @@ Logdir.prototype.createWriteStream = function (name) {
 
 Logdir.prototype.open = function (names, opts) {
     var self = this;
+    if (!opts) opts = {};
+    if (names === undefined) {
+        var tied = {};
+        self.list(function (err, files) {
+            if (err) return ev.emit('error', err);
+            var xsf = files.reduce(function (acc, file) {
+                acc[file] = sf(path.join(self.dir, file));
+                return acc;
+            }, {});
+            tied.slice = tie('slice', xsf);
+            tied.follow = tie('follow', xsf);
+            ev.emit('tie');
+        });
+        var ev = new EventEmitter;
+        ev.slice = function () {
+            var args = arguments;
+            if (tied.slice) return tied.slice.apply(null, args);
+            var tr = through();
+            ev.on('tie', function () {
+                tied.slice.apply(null, args).pipe(tr);
+            });
+            return tr;
+        };
+        ev.follow = function () {
+            var args = arguments;
+            if (tied.follow) return tied.follow.apply(null, args);
+            var tr = through();
+            ev.on('tie', function () {
+                tied.follow.apply(null, args).pipe(tr);
+            });
+            return tr;
+        };
+        return ev;
+    }
+    
     if (Array.isArray(names)) {
         var files = names.reduce(function (acc, name) {
             acc[name] = self.open(name, opts);
@@ -85,5 +120,21 @@ function tie (method, files) {
 }
 
 Logdir.prototype.list = function (cb) {
-    fs.readdir(this.dir, cb);
+    var dir = this.dir;
+    fs.readdir(dir, function (err, list) {
+        if (err) return cb(err);
+        
+        var ls = list.filter(function (file) { return !/^\./.test(file) });
+        var pending = ls.length;
+        if (pending === 0) return cb(null, []);
+        
+        var files = [];
+        ls.forEach(function (file) {
+            fs.stat(path.join(dir, file), function (err, s) {
+                if (err) return cb(err);
+                if (!s.isDirectory()) files.push(file);
+                if (--pending === 0) cb(null, files); 
+            });
+        });
+    });
 };
