@@ -49,17 +49,16 @@ Logdir.prototype.open = function (names) {
 Logdir.prototype.opendir = function () {
     var self = this;
     var tied = {};
-    var names = [];
+    var handles = {};
+    
     self.list(function (err, files) {
         if (err) return ev.emit('error', err);
-        var xsf = files.reduce(function (acc, file) {
-            acc[file] = sf(path.join(self.dir, file));
-            return acc;
-        }, {});
-        tied.slice = tie('slice', xsf);
-        tied.follow = tie('follow', xsf);
+        files.forEach(function (file) {
+            handles[file] = sf(path.join(self.dir, file));
+        });
+        tied.slice = tie('slice', handles);
+        tied.follow = tie('follow', handles);
         ev.emit('tie');
-        names.push.apply(names, files);
     });
     var watcher = null;
     var watch = function (tr) {
@@ -80,9 +79,8 @@ Logdir.prototype.opendir = function () {
             });
             
             function withFile (file) {
-                if (names.indexOf(file) >= 0) return;
-                names.push(file);
-                var s = sf(path.join(self.dir, file));
+                if (handles[file]) return;
+                var s = handles[file] = sf(path.join(self.dir, file));
                 s.follow(0).pipe(through(function (line) {
                     this.queue(file + ' ' + line);
                 })).pipe(tr, { end: false });
@@ -100,6 +98,7 @@ Logdir.prototype.opendir = function () {
         });
         return tr;
     };
+    
     ev.follow = function () {
         var tr = through();
         watch(tr);
@@ -114,6 +113,12 @@ Logdir.prototype.opendir = function () {
             });
         }
         return tr;
+    };
+    
+    ev.close = function () {
+        Object.keys(handles).forEach(function (key) {
+            handles[key].close();
+        });
     };
     return ev;
 };
