@@ -69,7 +69,7 @@ Logdir.prototype.opendir = function () {
             // windows, linux:
             if (file && !/^\./.test(file)) {
                 return fs.stat(path.join(self.dir, file), function (err, s) {
-                    if (!s.isDirectory()) withFile(file);
+                    if (s && !s.isDirectory()) withFile(file);
                 });
             }
             
@@ -81,7 +81,15 @@ Logdir.prototype.opendir = function () {
             function withFile (file) {
                 if (handles[file]) return;
                 var s = handles[file] = sf(path.join(self.dir, file));
-                s.follow(0).pipe(through(function (line) {
+                var fw = s.follow(0);
+                fw.on('error', function (err) {
+                    if (err && err.code === 'ENOENT') {
+                        delete handles[file];
+                        fw.destroy();
+                    }
+                    else tr.emit('error', err)
+                });
+                fw.pipe(through(function (line) {
                     this.queue(file + ' ' + line);
                 })).pipe(tr, { end: false });
             }
@@ -182,8 +190,8 @@ Logdir.prototype.list = function (cb) {
         var files = [];
         ls.forEach(function (file) {
             fs.stat(path.join(dir, file), function (err, s) {
-                if (err) return cb(err);
-                if (!s.isDirectory()) files.push(file);
+                if (err && err.code !== 'ENOENT') return cb(err);
+                if (s && !s.isDirectory()) files.push(file);
                 if (--pending === 0) cb(null, files); 
             });
         });
