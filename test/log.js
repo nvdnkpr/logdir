@@ -11,12 +11,12 @@ test('static log data', function (t) {
     function write (line) { lines.push(line) }
     function end () {
         t.deepEqual(lines, [
-            'b 300 ccc\n',
-            'a 301 EEE\n',
-            'a 320 FFF\n',
-            'b 400 ddd\n',
-            'b 500 eee\n',
-            'b 600 fff\n'
+            'a 300 ccc\n',
+            'b 301 EEE\n',
+            'b 320 FFF\n',
+            'a 400 ddd\n',
+            'a 500 eee\n',
+            'a 600 fff\n'
         ]);
     }
 });
