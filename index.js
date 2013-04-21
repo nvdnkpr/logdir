@@ -168,7 +168,15 @@ function tie (method, files) {
             });
             if (method === 'follow') {
                 Object.keys(files).forEach(function (key) {
-                    files[key].follow(-1,0).pipe(through(function (line) {
+                    var fw = files[key].follow(-1,0);
+                    fw.on('error', function (err) {
+                        if (err && err.code === 'ENOENT') {
+                            delete files[key];
+                            fw.destroy();
+                        }
+                        else tr.emit('error', err)
+                    });
+                    fw.pipe(through(function (line) {
                         this.queue(key + ' ' + line);
                     })).pipe(tr, { end: false });
                 });
