@@ -25,69 +25,15 @@ Logdir.prototype.createWriteStream = function (name) {
     return tr;
 };
 
-Logdir.prototype.open = function (names, opts) {
+Logdir.prototype.open = function (names) {
     var self = this;
-    if (!opts) opts = {};
     if (names === undefined) {
-        var tied = {};
-        var names = [];
-        self.list(function (err, files) {
-            if (err) return ev.emit('error', err);
-            var xsf = files.reduce(function (acc, file) {
-                acc[file] = sf(path.join(self.dir, file));
-                return acc;
-            }, {});
-            tied.slice = tie('slice', xsf);
-            tied.follow = tie('follow', xsf);
-            ev.emit('tie');
-            names.push.apply(names, files);
-        });
-        var watcher = null;
-        var watch = function (tr) {
-            if (!watcher) watcher = fs.watch(self.dir);
-            watcher.on('change', function (type) {
-                if (type !== 'rename') return;
-                self.list(function (err, files) {
-                    files.forEach(function (file) {
-                        if (names.indexOf(file) >= 0) return;
-                        names.push(file);
-                        var s = sf(path.join(self.dir, file));
-                        s.follow(-1,0).pipe(through(function (line) {
-                            this.queue(file + ' ' + line);
-                        }));
-                    });
-                });
-            });
-        };
-        
-        var ev = new EventEmitter;
-        ev.slice = function () {
-            var args = arguments;
-            if (tied.slice) return tied.slice.apply(null, args);
-            var tr = through();
-            ev.on('tie', function () {
-                tied.slice.apply(null, args).pipe(tr);
-            });
-            return tr;
-        };
-        ev.follow = function () {
-            var tr = through();
-            watch(tr);
-            
-            var args = arguments;
-            if (tied.follow) return tied.follow.apply(null, args);
-            var tr = through();
-            ev.on('tie', function () {
-                tied.follow.apply(null, args).pipe(tr);
-            });
-            return tr;
-        };
-        return ev;
+        return self.opendir();
     }
     
     if (Array.isArray(names)) {
         var files = names.reduce(function (acc, name) {
-            acc[name] = self.open(name, opts);
+            acc[name] = self.open(name);
             return acc;
         }, {});
         return {
@@ -98,6 +44,64 @@ Logdir.prototype.open = function (names, opts) {
     else {
         return sf(path.join(this.dir, names));
     }
+};
+
+Logdir.prototype.opendir = function () {
+    var self = this;
+    var tied = {};
+    var names = [];
+    self.list(function (err, files) {
+        if (err) return ev.emit('error', err);
+        var xsf = files.reduce(function (acc, file) {
+            acc[file] = sf(path.join(self.dir, file));
+            return acc;
+        }, {});
+        tied.slice = tie('slice', xsf);
+        tied.follow = tie('follow', xsf);
+        ev.emit('tie');
+        names.push.apply(names, files);
+    });
+    var watcher = null;
+    var watch = function (tr) {
+        if (!watcher) watcher = fs.watch(self.dir);
+        watcher.on('change', function (type) {
+            if (type !== 'rename') return;
+            self.list(function (err, files) {
+                files.forEach(function (file) {
+                    if (names.indexOf(file) >= 0) return;
+                    names.push(file);
+                    var s = sf(path.join(self.dir, file));
+                    s.follow(-1,0).pipe(through(function (line) {
+                        this.queue(file + ' ' + line);
+                    }));
+                });
+            });
+        });
+    };
+    
+    var ev = new EventEmitter;
+    ev.slice = function () {
+        var args = arguments;
+        if (tied.slice) return tied.slice.apply(null, args);
+        var tr = through();
+        ev.on('tie', function () {
+            tied.slice.apply(null, args).pipe(tr);
+        });
+        return tr;
+    };
+    ev.follow = function () {
+        var tr = through();
+        watch(tr);
+        
+        var args = arguments;
+        if (tied.follow) return tied.follow.apply(null, args);
+        var tr = through();
+        ev.on('tie', function () {
+            tied.follow.apply(null, args).pipe(tr);
+        });
+        return tr;
+    };
+    return ev;
 };
 
 function tie (method, files) {
