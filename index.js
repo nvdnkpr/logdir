@@ -97,13 +97,13 @@ function tie (method, files) {
             
             function write (line) {
                 var stamp = /^(\d+) /.exec(line);
-                if (stamp) buffer.push([ stamp[1], line ]);
+                if (stamp) buffer.push([ stamp[1], key, line ]);
             }
             function end () {
                 if (--pending !== 0) return;
                 buffer.sort(function (a, b) { return a[0] - b[0] });
                 buffer.slice.apply(buffer, args).forEach(function (msg) {
-                    tr.queue(key + ' ' + msg[1]);
+                    tr.queue(msg[1] + ' ' + msg[2]);
                 });
                 if (method === 'follow') {
                     Object.keys(files).forEach(function (key) {
