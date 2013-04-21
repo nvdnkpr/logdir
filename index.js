@@ -46,12 +46,39 @@ function tie (method, files) {
     return function () {
         var args = arguments;
         var tr = through();
+        tr.close = function () {
+            Object.keys(files).forEach(function (key) {
+                files[key].close();
+            });
+            tr.queue(null);
+        };
+        var buffer = [];
+        var keys = Object.keys(files);
+        var pending = keys.length;
         
-        Object.keys(files).forEach(function (key) {
-            var s = files[key][method].apply(files[key], args);
-            s.pipe(through(function (line) {
-                console.dir(line);
-            }));
+        keys.forEach(function (key) {
+            var s = files[key].slice.apply(files[key], args);
+            s.pipe(through(write, end));
+            
+            function write (line) {
+                var stamp = /^(\d+) /.exec(line);
+                if (stamp) buffer.push([ stamp[1], line ]);
+            }
+            function end () {
+                if (--pending !== 0) return;
+                buffer.sort(function (a, b) { return a[0] - b[0] });
+                buffer.slice.apply(buffer, args).forEach(function (msg) {
+                    tr.queue(key + ' ' + msg[1]);
+                });
+                if (method === 'follow') {
+                    Object.keys(files).forEach(function (key) {
+                        files[key].follow(-1,0).pipe(through(function (line) {
+                            this.queue(key + ' ' + line);
+                        })).pipe(tr, { end: false });
+                    });
+                }
+                else tr.close();
+            }
         });
         return tr;
     };
