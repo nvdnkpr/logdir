@@ -2,6 +2,8 @@
 
 dump text streams into a directory and read the data back intelligently
 
+[![build status](https://secure.travis-ci.org/substack/logdir.png)](http://travis-ci.org/substack/logdir)
+
 # example
 
 You can just create some writable streams and read the data back for a single
