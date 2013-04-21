@@ -64,20 +64,25 @@ Logdir.prototype.opendir = function () {
     var watcher = null;
     var watch = function (tr) {
         if (!watcher) watcher = fs.watch(self.dir);
-        watcher.on('change', function (type) {
+        watcher.on('change', function (type, file) {
             if (type !== 'rename') return;
             
-            // for BSD, OSX, Solaris:
+            // windows, linux:
+            if (file) return withFile(file);
+            
+            // BSD, OSX, Solaris:
             self.list(function (err, files) {
-                files.forEach(function (file) {
-                    if (names.indexOf(file) >= 0) return;
-                    names.push(file);
-                    var s = sf(path.join(self.dir, file));
-                    s.follow(0).pipe(through(function (line) {
-                        this.queue(file + ' ' + line);
-                    })).pipe(tr, { end: false });
-                });
+                files.forEach(withFile);
             });
+            
+            function withFile (file) {
+                if (names.indexOf(file) >= 0) return;
+                names.push(file);
+                var s = sf(path.join(self.dir, file));
+                s.follow(0).pipe(through(function (line) {
+                    this.queue(file + ' ' + line);
+                })).pipe(tr, { end: false });
+            }
         });
     };
     
