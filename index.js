@@ -66,14 +66,16 @@ Logdir.prototype.opendir = function () {
         if (!watcher) watcher = fs.watch(self.dir);
         watcher.on('change', function (type) {
             if (type !== 'rename') return;
+            
+            // for BSD, OSX, Solaris:
             self.list(function (err, files) {
                 files.forEach(function (file) {
                     if (names.indexOf(file) >= 0) return;
                     names.push(file);
                     var s = sf(path.join(self.dir, file));
-                    s.follow(-1,0).pipe(through(function (line) {
+                    s.follow(0).pipe(through(function (line) {
                         this.queue(file + ' ' + line);
-                    }));
+                    })).pipe(tr, { end: false });
                 });
             });
         });
@@ -94,11 +96,14 @@ Logdir.prototype.opendir = function () {
         watch(tr);
         
         var args = arguments;
-        if (tied.follow) return tied.follow.apply(null, args);
-        var tr = through();
-        ev.on('tie', function () {
+        if (tied.follow) {
             tied.follow.apply(null, args).pipe(tr);
-        });
+        }
+        else {
+            ev.on('tie', function () {
+                tied.follow.apply(null, args).pipe(tr);
+            });
+        }
         return tr;
     };
     return ev;
@@ -108,6 +113,7 @@ function tie (method, files) {
     return function () {
         var args = arguments;
         var tr = through();
+        tr.setMaxListeners(0);
         tr.close = function () {
             Object.keys(files).forEach(function (key) {
                 files[key].close();
