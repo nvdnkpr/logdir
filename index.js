@@ -68,7 +68,11 @@ Logdir.prototype.opendir = function () {
             if (type !== 'rename') return;
             
             // windows, linux:
-            if (file) return withFile(file);
+            if (file && !/^\./.test(file)) {
+                return fs.stat(path.join(self.dir, file), function (err, s) {
+                    if (!s.isDirectory()) withFile(file);
+                });
+            }
             
             // BSD, OSX, Solaris:
             self.list(function (err, files) {
