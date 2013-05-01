@@ -30,7 +30,7 @@ test('create files with multi-line output', function (t) {
     
     setTimeout(function () {
         var ws = fs.createWriteStream(tmpdir + '/b');
-        ws.write('2 def\n3 hij');
+        ws.write('2 def\n3 hij\n');
         setTimeout(function () {
             ws.end('4 klm\n');
         }, 20);
