@@ -18,35 +18,19 @@ test('create files with multi-line output', function (t) {
     
     var s = ld.opendir();
     var lines = [];
-    s.follow().pipe(through(write));
+    s.follow().pipe(through(function (line) { lines.push(line) }));
     
-    setTimeout(function () {
-        var ws = fs.createWriteStream(tmpdir + '/a');
-        ws.write('1 abc\n');
-        setTimeout(function () {
-            ws.end('5 nop\n');
-        }, 100);
-    }, 100);
-    
-    setTimeout(function () {
-        var ws = fs.createWriteStream(tmpdir + '/b');
-        ws.write('2 def\n3 hij\n');
-        setTimeout(function () {
-            ws.end('4 klm\n');
-        }, 20);
-    }, 150);
-    
-    setTimeout(function () {
-        t.deepEqual(lines, [
-            'a 1 abc\n',
-            'b 2 def\n',
-            'b 3 hij\n',
-            'b 4 klm\n',
-            'a 5 nop\n'
-        ]);
-    }, 250);
-    
-    function write (line) {
-        lines.push(line);
+    var ws = fs.createWriteStream(tmpdir + '/a');
+    var msg = '';
+    for (var i = 0; i < 10; i++) {
+        msg += i + ' ' + (Math.random() * Math.pow(16, 8)).toString(16) + '\n';
     }
+    ws.write(msg);
+    
+    setTimeout(function () {
+        t.deepEqual(lines,
+            msg.split('\n').slice(0,-1)
+            .map(function (s) { return 'a ' + s + '\n' })
+        );
+    }, 250);
 });
