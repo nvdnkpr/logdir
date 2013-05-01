@@ -3,6 +3,7 @@ var test = require('tap').test;
 var fs = require('fs');
 var path = require('path');
 var through = require('through');
+var chunky = require('chunky');
 
 var os = require('os');
 var mkdirp = require('mkdirp');
@@ -13,24 +14,29 @@ mkdirp.sync(tmpdir);
 var ld = logdir(tmpdir);
 
 test('create files with multi-line output', function (t) {
-    t.plan(1);
-    t.on('end', function () { s.close() });
+    t.plan(5);
     
-    var s = ld.opendir();
-    var lines = [];
-    s.follow().pipe(through(function (line) { lines.push(line) }));
-    
-    var ws = fs.createWriteStream(tmpdir + '/a');
-    var msg = '';
-    for (var i = 0; i < 10; i++) {
-        msg += i + ' ' + (Math.random() * Math.pow(16, 8)).toString(16) + '\n';
-    }
-    ws.write(msg);
-    
-    setTimeout(function () {
-        t.deepEqual(lines,
-            msg.split('\n').slice(0,-1)
-            .map(function (s) { return 'a ' + s + '\n' })
-        );
-    }, 250);
+    for (var n = 0; n < 5; n++) (function () {
+        var s = ld.opendir();
+        t.on('end', function () { s.close() });
+        
+        var lines = [];
+        s.follow().pipe(through(function (line) { lines.push(line) }));
+        
+        var ws = fs.createWriteStream(tmpdir + '/a');
+        var msg = '';
+        for (var i = 0; i < 10; i++) {
+            msg += i + ' ' + (Math.random() * Math.pow(16, 8)).toString(16) + '\n';
+        }
+        chunky(msg).forEach(function (buf) {
+            ws.write(buf);
+        });
+        
+        setTimeout(function () {
+            t.deepEqual(lines,
+                msg.split('\n').slice(0,-1)
+                .map(function (s) { return 'a ' + s + '\n' })
+            );
+        }, 250);
+    })();
 });

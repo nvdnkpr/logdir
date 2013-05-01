@@ -4,6 +4,7 @@ var path = require('path');
 var inherits = require('inherits');
 var through = require('through');
 var EventEmitter = require('events').EventEmitter;
+var split = require('split');
 
 module.exports = function (dir) {
     return new Logdir(dir);
