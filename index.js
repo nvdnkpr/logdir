@@ -4,7 +4,6 @@ var path = require('path');
 var inherits = require('inherits');
 var through = require('through');
 var EventEmitter = require('events').EventEmitter;
-var split = require('split');
 
 module.exports = function (dir) {
     return new Logdir(dir);
@@ -19,11 +18,37 @@ function Logdir (dir) {
 Logdir.prototype.createWriteStream = function (name) {
     var file = path.join(this.dir, name);
     var ws = fs.createWriteStream(file, { flags: 'a' });
-    var tr = through(function (line) {
-        this.queue(Date.now() + ' ' + line);
-    });
+    var remaining = false;
+    var tr = through(write, end);
     tr.pipe(ws);
     return tr;
+    
+    function write (line) {
+        var parts = line.split('\n');
+        
+        if (remaining) {
+            tr.queue(parts.shift() + '\n');
+            remaining = false;
+        }
+        
+        for (var i = 0; i < parts.length - 1; i++) {
+            tr.queue(Date.now() + ' ' + parts[i] + '\n');
+        }
+        
+        var rem = parts[parts.length - 1];
+        if (rem && rem.length) {
+            tr.queue(Date.now() + ' ' + parts[i]);
+            remaining = true;
+        }
+    }
+    
+    function end () {
+        if (remaining) {
+            tr.queue('\n');
+            remaining = false;
+        }
+        tr.queue(null);
+    }
 };
 
 Logdir.prototype.open = function (names) {

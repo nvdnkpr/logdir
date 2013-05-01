@@ -14,29 +14,27 @@ mkdirp.sync(tmpdir);
 var ld = logdir(tmpdir);
 
 test('create files with multi-line output', function (t) {
-    t.plan(5);
+    t.plan(1);
     
-    for (var n = 0; n < 5; n++) (function () {
-        var s = ld.opendir();
-        t.on('end', function () { s.close() });
-        
-        var lines = [];
-        s.follow().pipe(through(function (line) { lines.push(line) }));
-        
-        var ws = fs.createWriteStream(tmpdir + '/a');
-        var msg = '';
-        for (var i = 0; i < 10; i++) {
-            msg += i + ' ' + (Math.random() * Math.pow(16, 8)).toString(16) + '\n';
-        }
-        chunky(Buffer(msg)).forEach(function (buf) {
-            ws.write(buf);
-        });
-        
-        setTimeout(function () {
-            t.deepEqual(lines,
-                msg.split('\n').slice(0,-1)
-                .map(function (s) { return 'a ' + s + '\n' })
-            );
-        }, 250);
-    })();
+    var s = ld.opendir();
+    t.on('end', function () { s.close() });
+    
+    var lines = [];
+    s.follow().pipe(through(function (line) { lines.push(line) }));
+    
+    var ws = fs.createWriteStream(tmpdir + '/a');
+    var msg = '';
+    for (var i = 0; i < 10; i++) {
+        msg += i + ' ' + (Math.random() * Math.pow(16, 8)).toString(16) + '\n';
+    }
+    chunky(Buffer(msg)).forEach(function (buf) {
+        ws.write(buf);
+    });
+    
+    setTimeout(function () {
+        t.deepEqual(lines,
+            msg.split('\n').slice(0,-1)
+            .map(function (s) { return 'a ' + s + '\n' })
+        );
+    }, 250);
 });
