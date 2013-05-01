@@ -28,7 +28,7 @@ test('create files with multi-line output', function (t) {
         for (var i = 0; i < 10; i++) {
             msg += i + ' ' + (Math.random() * Math.pow(16, 8)).toString(16) + '\n';
         }
-        chunky(msg).forEach(function (buf) {
+        chunky(Buffer(msg)).forEach(function (buf) {
             ws.write(buf);
         });
         
