@@ -36,5 +36,5 @@ test('create files with multi-line output', function (t) {
             msg.split('\n').slice(0,-1)
             .map(function (s) { return 'a ' + s + '\n' })
         );
-    }, 250);
+    }, 500);
 });

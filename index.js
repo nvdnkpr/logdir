@@ -37,7 +37,7 @@ Logdir.prototype.createWriteStream = function (name) {
         
         var rem = parts[parts.length - 1];
         if (rem && rem.length) {
-            tr.queue(Date.now() + ' ' + parts[i]);
+            tr.queue(Date.now() + ' ' + rem);
             remaining = true;
         }
     }
