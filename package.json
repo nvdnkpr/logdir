@@ -1,6 +1,6 @@
 {
     "name": "logdir",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "dump text streams into a log directory and read the data back intelligently",
     "main": "index.js",
     "dependencies": {
