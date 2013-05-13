@@ -24,7 +24,7 @@ Logdir.prototype.createWriteStream = function (name) {
     return tr;
     
     function write (line) {
-        var parts = line.split('\n');
+        var parts = String(line).split('\n');
         
         if (remaining) {
             tr.queue(parts.shift() + '\n');
